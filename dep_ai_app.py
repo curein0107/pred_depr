@@ -1,9 +1,8 @@
 import streamlit as st
-import joblib, requests
+import joblib
+import json
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
-from xgboost import XGBClassifier
 from datetime import datetime
 
 # --- 1. 모델 & 벡터라이저 불러오기 ---
@@ -77,6 +76,7 @@ if st.button("진단하기"):
         )
 
         st.success("✅ 예측이 완료되었습니다. 결과는 참고용이며, 중등도 우울증일 경우 전문의 상담이 필요합니다.")
+
 
 
 
