@@ -7,11 +7,11 @@ from xgboost import XGBClassifier
 from datetime import datetime
 
 url = "https://huggingface.co/curein/korean_dep_vec/blob/main/tfidf_vectorizer.pkl"
-with open("tfidf_vectorizer.pkl", "wb") as f:
+with open("tfidf_vectorizer_b.pkl", "wb") as f:
     f.write(requests.get(url).content)
 
 # --- 1. 모델 & 벡터라이저 불러오기 ---
-tfidf_vectorizer = joblib.load("tfidf_vectorizer.pkl")
+tfidf_vectorizer = joblib.load("tfidf_vectorizer_b.pkl")
 xgb_model = joblib.load("xgbc_nlp_depression_level_model.pkl")
 
 # --- 2. 라벨 맵 ---
@@ -77,5 +77,6 @@ if st.button("진단하기"):
         )
 
         st.success("✅ 예측이 완료되었습니다. 결과는 참고용이며, 중등도 우울증일 경우 전문의 상담이 필요합니다.")
+
 
 
