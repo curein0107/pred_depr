@@ -14,8 +14,7 @@ idf = np.load("idf.npy")
 
 # 초기화
 vectorizer = TfidfVectorizer(vocabulary=vocab)
-vectorizer._tfidf._idf_diag = np.diag(idf)   # 내부에 직접 주입
-vectorizer.idf_ = idf
+vectorizer.idf_ = idf 
 
 xgb_model = joblib.load("xgbc_nlp_depression_level_model.pkl")
 
@@ -83,6 +82,7 @@ if st.button("진단하기"):
         )
 
         st.success("✅ 예측이 완료되었습니다. 결과는 참고용이며, 중등도 우울증일 경우 전문의 상담이 필요합니다.")
+
 
 
 
