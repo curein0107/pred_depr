@@ -6,12 +6,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 
 # --- 1. 모델 & 벡터라이저 불러오기 ---
+tfidf_vectorizer = joblib.load("tfidf_vectorizer.pkl")
 xgb_model = joblib.load("xgbc_nlp_depression_level_model.pkl")
 
-with open("vocab.json", "r", encoding="utf-8") as f:
-    vocab = json.load(f)
-
-tfidf_vectorizer = TfidfVectorizer(vocabulary=vocab)
 
 # --- 2. 라벨 맵 ---
 label_map = {0: "정상", 1: "경미한 우울증", 2: "중등도 우울증"}
@@ -76,6 +73,7 @@ if st.button("진단하기"):
         )
 
         st.success("✅ 예측이 완료되었습니다. 결과는 참고용이며, 중등도 우울증일 경우 전문의 상담이 필요합니다.")
+
 
 
 
