@@ -6,7 +6,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from xgboost import XGBClassifier
 from datetime import datetime
 
-url = "https://huggingface.co/curein/korean_dep_vec/blob/main/tfidf_vectorizer.pkl"
+url = "https://huggingface.co/curein/korean_dep_vec/blob/main/tfidf_vectorizer_b.pkl"
 with open("tfidf_vectorizer_b.pkl", "wb") as f:
     f.write(requests.get(url).content)
 
@@ -77,6 +77,7 @@ if st.button("진단하기"):
         )
 
         st.success("✅ 예측이 완료되었습니다. 결과는 참고용이며, 중등도 우울증일 경우 전문의 상담이 필요합니다.")
+
 
 
 
