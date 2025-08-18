@@ -26,7 +26,7 @@ label_map = {0: "정상", 1: "경미한 우울증", 2: "중등도 우울증"}
 st.set_page_config(page_title="우울증 진단서", layout="centered")
 st.title("🧠 인공지능 기반 우울증 중증도 예측 진단서")
 
-st.markdown("본 인공지능 소프트웨어는 의료기관 정신건강의학과 전문의의 우울증 진단 경험을 인공지능으로 학습하여, 문장만으로 우울증 중증도를 진단 예측할 수 있습니다.")
+st.markdown("본 소프트웨어는 분당차병원 정신건강의학과 전문의의 우울증 진단 경험을 인공지능으로 학습하여, 문장만으로 우울증 중증도를 진단 예측할 수 있습니다.")
 st.markdown("아래 진단서는 인공지능 분석 결과이며, **정신건강의학과 전문의의 최종 진단을 대체하지 않습니다.**")
 
 # 입력창
@@ -84,6 +84,12 @@ if st.button("진단하기"):
         st.success("✅ 예측이 완료되었습니다. 결과는 참고용이며, 중등도 우울증일 경우 전문의 상담이 필요합니다.")
 
 
+st.markdown("#  Additional information")
+st.markdown("* Patent title : APPARATUS AND METHOD FOR PREDICTING DEPRESSION LEVELS USING NATURAL LANGUAGE PROCESSING AND EXPLAINABLE ARTIFICIAL INTELLIGENCE")
+st.markdown("* Patent number :10-2024-0119065")
+st.markdown("* Developer: Myung-Gwan Kim")
+st.markdown("* Applicant: CHA University Industry-Academic Cooperation Foundation")
+st.markdown("* Inventors: Myung-Gwan Kim, Hyun Wook Han, DaWoon Wang, JoonHo Park")
 
 
 
