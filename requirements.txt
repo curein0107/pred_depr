@@ -3,6 +3,8 @@ scikit-learn
 numpy
 pandas
 joblib
+pickle
 transformers
 torch
 sentencepiece
+xgboost
