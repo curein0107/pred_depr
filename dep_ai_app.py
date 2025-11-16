@@ -314,10 +314,9 @@ st.markdown(
     "인공지능으로 학습하여, 문장만으로 우울증 중증도를 예측하고 관련 상담 정보를 제공합니다. "
     "**이 앱의 정보는 참고용이며 정신건강의학과 전문의의 진단을 대체하지 않습니다.**"
 )
-
 # Footer with additional information
 st.markdown("---")
-st.markdown("# 참고 정보")
+st.markdown("참고 정보")
 st.markdown("* Patent title: APPARATUS AND METHOD FOR PREDICTING DEPRESSION LEVELS USING NATURAL LANGUAGE PROCESSING AND EXPLAINABLE ARTIFICIAL INTELLIGENCE")
 st.markdown("* Patent number: 10-2024-0119065")
 st.markdown("* Developer: Myung-Gwan Kim")
@@ -326,7 +325,7 @@ st.markdown("* Inventors: Myung-Gwan Kim, Hyun Wook Han, DaWoon Wang, JoonHo Par
 st.markdown("---")
 
 # User input area
-user_input = st.text_area("# 현재 느끼고 있는 감정을 문장으로 입력해보세요.", height=150)
+user_input = st.text_area("## 현재 느끼고 있는 감정을 문장으로 입력해보세요.", height=150)
 
 # Initialize session state for predictions and chat
 if "last_pred_label" not in st.session_state:
