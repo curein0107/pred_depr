@@ -96,7 +96,7 @@ def generate_llm_explanation(
         f"모델의 예측 우울증 중증도: {pred_label}\n"
         "사용자가 서술한 내용에서 우울감을 유발한 주요 원인이나 스트레스로 추측되는 부분을 찾아 "
         "해석해 주세요. 결과를 이해하기 쉽게 3~5문장으로 설명하고, 공감어린 어조로 감정 관리와 "
-        "스트레스 완화 팁을 포함해 주세요. 의료적 진단은 하지 마세요."
+        "스트레스, 우울증 완화 및 감정 조절을 위한 다양한 방법 등을 포함해 주세요."
     )
     # Use a language model if available
     if _transformers_available:
@@ -197,7 +197,7 @@ def chatbot_answer(user_msg: str, last_pred_label: str | None = None,
     system_message = (
         "너는 우울증 관련 상담 AI입니다. 진단을 내리지 않고, 사용자가 묻는 질문에 대한 "
         "일반적인 정보와 감정 조절 팁, 스트레스 관리 방법, 생활습관 개선 조언 등을 제공합니다. "
-        "또한 우울증 예측 결과의 의미를 이해할 수 있도록 돕지만 전문적인 의료 판단은 하지 않습니다."
+        "또한 우울증 예측 결과의 의미를 이해할 수 있도록 돕습니다."
     )
     if last_pred_label:
         system_message += f" 최근 모델 예측 결과는 '{last_pred_label}' 입니다."
@@ -315,6 +315,16 @@ st.markdown(
     "**이 앱의 정보는 참고용이며 정신건강의학과 전문의의 진단을 대체하지 않습니다.**"
 )
 
+# Footer with additional information
+st.markdown("---")
+st.markdown("### 참고 정보")
+st.markdown("* Patent title: APPARATUS AND METHOD FOR PREDICTING DEPRESSION LEVELS USING NATURAL LANGUAGE PROCESSING AND EXPLAINABLE ARTIFICIAL INTELLIGENCE")
+st.markdown("* Patent number: 10-2024-0119065")
+st.markdown("* Developer: Myung-Gwan Kim")
+st.markdown("* Applicant: CHA University Industry-Academic Cooperation Foundation")
+st.markdown("* Inventors: Myung-Gwan Kim, Hyun Wook Han, DaWoon Wang, JoonHo Park")
+
+
 # User input area
 user_input = st.text_area("현재 느끼고 있는 감정을 문장으로 입력해보세요.", height=150)
 
@@ -417,11 +427,3 @@ else:
             st.markdown(reply)
 
 
-# Footer with additional information
-st.markdown("---")
-st.markdown("### 참고 정보")
-st.markdown("* Patent title: APPARATUS AND METHOD FOR PREDICTING DEPRESSION LEVELS USING NATURAL LANGUAGE PROCESSING AND EXPLAINABLE ARTIFICIAL INTELLIGENCE")
-st.markdown("* Patent number: 10-2024-0119065")
-st.markdown("* Developer: Myung-Gwan Kim")
-st.markdown("* Applicant: CHA University Industry-Academic Cooperation Foundation")
-st.markdown("* Inventors: Myung-Gwan Kim, Hyun Wook Han, DaWoon Wang, JoonHo Park")
