@@ -5,6 +5,24 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 
+"""
+Streamlit application for depression severity prediction with
+explainable AI and conversational guidance.
+
+This application uses a TF‑IDF vectorizer and a pre‑trained XGBoost
+model to predict the severity of depressive symptoms from a user‑
+provided text description.  After generating a prediction, the app
+produces a concise explanation of the result using a lightweight
+language model when available (e.g. MiniLM or DistilGPT2).  The app
+also includes a chat interface that allows users to ask follow‑up
+questions.  The chatbot provides general information and wellness
+tips related to depression, emotion regulation, stress management and
+healthy lifestyle habits without offering any medical diagnosis.
+
+Safety note: all responses explicitly avoid making clinical
+assessments.  The advice offered is general in nature and users
+should consult a healthcare professional for medical guidance.
+"""
 
 # Try to import the Hugging Face transformers library.  If it's not
 # available (for instance due to missing dependencies), we set a
@@ -201,33 +219,63 @@ def chatbot_answer(user_msg: str, last_pred_label: str | None = None,
             return text.split("AI:")[-1].strip()
         except Exception:
             pass
-    # Fallback generic responses based on keywords
+    # Determine severity-specific suggestion templates
+    # Each severity has specific advice for different query categories.  If no
+    # prediction is available, a general template is used.
+    severity_templates = {
+        "정상": {
+            "stress": "현재 예측 결과는 정상 범주입니다. 스트레스를 관리하기 위해 규칙적인 운동, 충분한 수면, 균형 잡힌 식사, 명상과 감사일기를 활용해 좋은 상태를 유지하세요.",
+            "emotion": "현재 정상 범주이지만 감정 관리를 위해 마음챙김과 호흡법, 감정 일기, 긍정과 부정 감정의 균형을 유지하는 것이 좋습니다.",
+            "lifestyle": "현재 정상 범주입니다. 건강한 생활습관을 유지하기 위해 꾸준한 운동, 충분한 수면, 균형 잡힌 식단, 카페인·알코올 제한, 취미 활동을 이어가세요.",
+            "result": "현재 예측 결과는 정상 범주로 특별한 우려는 없습니다. 스트레스를 느낄 때에는 건강한 생활습관과 스트레스 관리 기법을 활용하면 도움이 됩니다.",
+            "default": "현재 정상 범주에 속해 있으니 신체와 마음의 건강을 지키기 위해 건강한 생활습관과 스트레스 관리법을 꾸준히 실천하세요. 궁금한 점이 있으면 언제든지 질문해 주세요."
+        },
+        "경미한 우울증": {
+            "stress": "경미한 우울 증상이 감지되었습니다. 스트레스를 줄이기 위해 규칙적인 운동, 충분한 수면, 균형 잡힌 식단과 함께 명상이나 감사일기를 시도해보세요. 주변 사람들과 대화를 나누는 것도 도움이 됩니다.",
+            "emotion": "경미한 우울 증상이 있으니 마음챙김, 호흡법, 감정 일기 등을 활용해 감정을 관리해보세요. 긍정적인 경험에 집중하고, 걱정을 나눌 수 있는 신뢰할 수 있는 사람들과 소통하세요.",
+            "lifestyle": "경미한 우울 증상이 있으므로 건강한 생활습관을 더욱 신경 써야 합니다. 운동, 충분한 수면, 균형 잡힌 식단, 카페인·알코올 절제, 흡연과 약물 피하기 등이 도움이 됩니다. 또한 즐거움을 느낄 수 있는 취미와 활동을 지속하세요.",
+            "result": "경미한 우울 증상이 감지되었지만 적절한 관리로 개선될 수 있습니다. 걱정이 지속되면 상담을 권유받으시고, 스트레스 관리와 생활습관 개선을 통해 완화를 도모하세요.",
+            "default": "경미한 우울 증상이 있으니 기분을 관리하기 위해 건강한 생활습관과 스트레스 관리법을 꾸준히 실천하고, 필요하면 주변 사람들과 이야기하거나 상담을 고려해보세요. 추가 질문이 있으시면 언제든지 말씀해 주세요."
+        },
+        "중등도 우울증": {
+            "stress": "중등도 우울 증상이 감지되었습니다. 스트레스 관리가 특히 중요합니다. 규칙적인 운동, 충분한 수면, 균형 잡힌 식단, 명상과 감사일기를 실천하세요. 또한, 신뢰할 수 있는 사람들과 마음을 나누고 필요하다면 전문적인 상담을 고려해보세요.",
+            "emotion": "중등도 우울 증상이 있으므로 감정 관리에 더욱 신경을 써야 합니다. 마음챙김과 호흡법을 통해 감정을 정리하고, 감정일기를 써보세요. 주변의 지지망을 활용하고 부정적인 생각을 신뢰할 수 있는 사람들과 공유하세요.",
+            "lifestyle": "중등도 우울 증상이 있으므로 건강한 생활습관과 더불어 전문적인 지원을 받을 필요가 있습니다. 꾸준한 운동과 균형 잡힌 식단, 충분한 수면, 카페인·알코올 제한, 흡연·약물 피하기를 실천하세요. 심각한 증상이 지속될 경우 정신건강 전문가에게 상담을 받아보세요.",
+            "result": "중등도 우울 증상이 감지되었습니다. 예측 결과를 참고하여, 전문적인 도움을 받고 건강한 생활습관과 스트레스 관리법을 실천하는 것이 중요합니다. 주변인과의 소통과 상담을 통해 지지를 받으세요.",
+            "default": "중등도 우울 증상이 있으므로 스스로를 돌보고 전문적인 지원을 받는 것이 중요합니다. 스트레스 관리와 생활습관 개선을 꾸준히 실천하고, 필요하면 전문기관이나 전문가의 도움을 받아보세요. 추가 질문이 있으면 언제든지 말씀해 주세요."
+        }
+    }
+    # Normalise message for keyword detection
     msg = user_msg.lower()
+    # Determine which template to use based on last prediction
+    template = severity_templates.get(last_pred_label) if last_pred_label in severity_templates else None
+    # Define category keys
+    category = None
     if any(keyword in msg for keyword in ["스트레스", "stress"]):
-        return (
-            "스트레스를 관리하기 위해서는 규칙적인 운동, 충분한 수면, 균형 잡힌 식사, 심호흡이나 명상과 같은 이완 기법을 활용해보세요. "
-            "CDC와 NIMH는 감사일기 쓰기, 자연 속 산책, 믿을 수 있는 사람들과 대화하는 것이 스트레스 완화에 도움이 된다고 설명합니다."
-        )
-    if any(keyword in msg for keyword in ["감정", "조절", "emotion"]):
-        return (
-            "감정을 조절하기 위해서는 마음챙김과 호흡법을 통해 현재 순간에 집중하고, 감정을 일기에 기록해 표현하는 것이 좋습니다. "
-            "또한 긍정과 부정 감정의 균형을 유지하고 감사하는 마음을 갖는 것이 도움이 됩니다."
-        )
-    if any(keyword in msg for keyword in ["생활", "습관", "lifestyle"]):
-        return (
-            "건강한 생활습관을 위해서는 규칙적인 운동과 충분한 수면, 균형 잡힌 식단을 유지하고 카페인·알코올 섭취를 줄이며, 담배와 약물을 피하는 것이 중요합니다. "
-            "가족과 친구들과 시간을 보내고 취미나 봉사 활동을 통해 삶의 의미를 찾는 것도 도움이 됩니다."
-        )
-    if any(keyword in msg for keyword in ["결과", "예측", "해석"]):
-        return (
-            "모델의 예측 결과는 참고용으로, 정신건강 상태를 이해하는 데 도움이 될 수 있습니다. "
-            "결과에 대해 걱정된다면 믿을 수 있는 사람들과 이야기하거나 전문의와 상담해보세요. 건강한 생활습관과 스트레스 관리가 상태 개선에 도움이 될 수 있습니다."
-        )
-    # Default fallback
-    return (
-        "질문을 해주셔서 감사합니다. 저는 일반적인 정보만 제공하는 상담 AI이며, 진단을 내리거나 치료를 대신하지 않습니다. "
-        "생활습관 개선과 스트레스 관리, 긍정적인 마음가짐을 통해 정신건강을 돌보세요. 궁금한 점이 있으면 언제든지 질문해 주세요."
-    )
+        category = "stress"
+    elif any(keyword in msg for keyword in ["감정", "조절", "emotion"]):
+        category = "emotion"
+    elif any(keyword in msg for keyword in ["생활", "습관", "lifestyle"]):
+        category = "lifestyle"
+    elif any(keyword in msg for keyword in ["결과", "예측", "해석"]):
+        category = "result"
+    # If we have a template for this severity, return the corresponding message
+    if template:
+        if category and category in template:
+            return template[category]
+        # default category message
+        return template["default"]
+    # Generic responses when no prediction is available
+    generic = {
+        "stress": "스트레스를 관리하기 위해 규칙적인 운동, 충분한 수면, 균형 잡힌 식단, 심호흡과 명상, 감사일기, 자연 속 산책, 신뢰할 수 있는 사람들과의 대화를 시도해보세요.",
+        "emotion": "감정을 조절하기 위해 마음챙김과 호흡법을 통해 현재 순간에 집중하고, 감정일기를 써서 감정을 표현해보세요. 긍정과 부정 감정의 균형을 유지하고 감사하는 마음을 갖는 것이 도움이 됩니다.",
+        "lifestyle": "건강한 생활습관을 위해 규칙적인 운동, 충분한 수면, 균형 잡힌 식단, 카페인·알코올 제한, 흡연·약물 피하기를 실천하세요. 가족과 친구들과 시간을 보내고 취미 활동을 이어가는 것도 중요합니다.",
+        "result": "모델 예측 결과는 참고용입니다. 결과가 걱정되면 신뢰할 수 있는 사람들과 상담하거나 전문가의 조언을 구하세요. 건강한 생활습관과 스트레스 관리가 도움이 될 수 있습니다.",
+        "default": "질문을 해주셔서 감사합니다. 저는 일반적인 정보만 제공하는 상담 AI이며, 진단을 내리거나 치료를 대신하지 않습니다. 생활습관 개선과 스트레스 관리, 긍정적인 마음가짐을 통해 정신건강을 돌보세요. 궁금한 점이 있으면 언제든지 질문해 주세요."
+    }
+    if category and category in generic:
+        return generic[category]
+    return generic["default"]
 
 
 # -----------------------------------------------------------------------------
