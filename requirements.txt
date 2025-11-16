@@ -1,9 +1,15 @@
+
 streamlit
 numpy
 pandas
 scikit-learn
 joblib
-xgboost==2.1.1
+
+# Lightweight language model dependencies.  Versions are pinned to ensure
+# compatibility with Python 3.13 and Streamlit Cloud.  See logs for details.
 transformers==4.46.3
 torch==2.5.1
 sentencepiece
+
+# XGBoost version with Python 3.13 support
+xgboost==2.1.1
