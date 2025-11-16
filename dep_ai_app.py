@@ -5,6 +5,24 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 
+"""
+Streamlit application for depression severity prediction with
+explainable AI and conversational guidance.
+
+This application uses a TF‑IDF vectorizer and a pre‑trained XGBoost
+model to predict the severity of depressive symptoms from a user‑
+provided text description.  After generating a prediction, the app
+produces a concise explanation of the result using a lightweight
+language model when available (e.g. MiniLM or DistilGPT2).  The app
+also includes a chat interface that allows users to ask follow‑up
+questions.  The chatbot provides general information and wellness
+tips related to depression, emotion regulation, stress management and
+healthy lifestyle habits without offering any medical diagnosis.
+
+Safety note: all responses explicitly avoid making clinical
+assessments.  The advice offered is general in nature and users
+should consult a healthcare professional for medical guidance.
+"""
 
 # Try to import the Hugging Face transformers library.  If it's not
 # available (for instance due to missing dependencies), we set a
