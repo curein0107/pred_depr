@@ -95,7 +95,7 @@ def generate_llm_explanation(
         f"사용자의 진술: {user_text}\n"
         f"모델의 예측 우울증 중증도: {pred_label}\n"
         "사용자가 서술한 내용에서 우울감을 유발한 주요 원인이나 스트레스로 추측되는 부분을 찾아 "
-        "해석해 주세요. 결과를 이해하기 쉽게 3~5문장으로 설명하고, 공감어린 어조로 감정 관리와 "
+        "해석해 주세요. 결과를 이해하기 쉽게 5~10문장으로 설명하고, 공감어린 어조로 감정 관리와 "
         "스트레스, 우울증 완화 및 감정 조절을 위한 다양한 방법 등을 포함해 주세요."
     )
     # Use a language model if available
@@ -201,7 +201,7 @@ def chatbot_answer(user_msg: str, last_pred_label: str | None = None,
     )
     if last_pred_label:
         system_message += f" 최근 모델 예측 결과는 '{last_pred_label}' 입니다."
-    system_message += " 질문에 대해 공감하는 어조로 3~5문장으로 답변하세요."
+    system_message += " 질문에 대해 공감하는 어조로 5~7문장으로 답변하세요."
     # Use transformers if available
     if _transformers_available:
         try:
@@ -317,16 +317,16 @@ st.markdown(
 
 # Footer with additional information
 st.markdown("---")
-st.markdown("### 참고 정보")
+st.markdown("# 참고 정보")
 st.markdown("* Patent title: APPARATUS AND METHOD FOR PREDICTING DEPRESSION LEVELS USING NATURAL LANGUAGE PROCESSING AND EXPLAINABLE ARTIFICIAL INTELLIGENCE")
 st.markdown("* Patent number: 10-2024-0119065")
 st.markdown("* Developer: Myung-Gwan Kim")
 st.markdown("* Applicant: CHA University Industry-Academic Cooperation Foundation")
 st.markdown("* Inventors: Myung-Gwan Kim, Hyun Wook Han, DaWoon Wang, JoonHo Park")
-
+st.markdown("---")
 
 # User input area
-user_input = st.text_area("현재 느끼고 있는 감정을 문장으로 입력해보세요.", height=150)
+user_input = st.text_area("# 현재 느끼고 있는 감정을 문장으로 입력해보세요.", height=150)
 
 # Initialize session state for predictions and chat
 if "last_pred_label" not in st.session_state:
