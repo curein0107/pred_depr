@@ -5,6 +5,24 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 
+"""
+Streamlit application for depression severity prediction with
+explainable AI and conversational guidance.
+
+This application uses a TF‑IDF vectorizer and a pre‑trained XGBoost
+model to predict the severity of depressive symptoms from a user‑
+provided text description.  After generating a prediction, the app
+produces a concise explanation of the result using a lightweight
+language model when available (e.g. MiniLM or DistilGPT2).  The app
+also includes a chat interface that allows users to ask follow‑up
+questions.  The chatbot provides general information and wellness
+tips related to depression, emotion regulation, stress management and
+healthy lifestyle habits without offering any medical diagnosis.
+
+Safety note: all responses explicitly avoid making clinical
+assessments.  The advice offered is general in nature and users
+should consult a healthcare professional for medical guidance.
+"""
 
 # Try to import the Hugging Face transformers library.  If it's not
 # available (for instance due to missing dependencies), we set a
@@ -52,7 +70,7 @@ label_map = {0: "정상", 1: "경미한 우울증", 2: "중등도 우울증"}
 def generate_llm_explanation(
     user_text: str,
     pred_label: str,
-    llm_model_name: str = "distilgpt2",
+    llm_model_name: str = "openai/gpt-oss-20b",
     device: str = "cpu",
 ) -> str:
     """
@@ -96,26 +114,41 @@ def generate_llm_explanation(
     # Use a language model if available
     if _transformers_available:
         try:
+            # The GPT‑OSS series uses the Harmony response format.  Using the
+            # Transformers chat pipeline with ``messages`` automatically applies
+            # the proper formatting.  We set ``torch_dtype" and ``device_map``
+            # to ``auto" so that the model will select an appropriate precision
+            # and device.  On systems without a GPU or with insufficient
+            # memory, this may raise an exception, in which case we fall back
+            # to predefined text.
             tokenizer = AutoTokenizer.from_pretrained(llm_model_name)
-            model = AutoModelForCausalLM.from_pretrained(llm_model_name)
+            model = AutoModelForCausalLM.from_pretrained(
+                llm_model_name,
+                torch_dtype="auto",
+                device_map="auto",
+            )
             gen = pipeline(
                 "text-generation",
                 model=model,
                 tokenizer=tokenizer,
-                device=0 if device == "cuda" else -1,
+                torch_dtype="auto",
+                device_map="auto",
             )
-            result = gen(
-                prompt,
-                max_length=len(prompt.split()) + 80,
-                num_return_sequences=1,
-                do_sample=True,
-                temperature=0.8,
-            )
-            generated = result[0]["generated_text"]
-            # Remove the prompt portion and return the explanation
-            # If the model echoes the prompt, split on the last newline
-            explanation_lines = generated.split("\n")
-            return explanation_lines[-1].strip()
+            # Construct the conversation with a single user message.  The
+            # pipeline will return a list of messages using the Harmony
+            # format; the last item contains the assistant's answer.
+            messages = [
+                {"role": "user", "content": prompt},
+            ]
+            result = gen(messages, max_new_tokens=160)
+            generated_msgs = result[0]["generated_text"]
+            # Extract the assistant's reply from the generated messages
+            last_msg = generated_msgs[-1]
+            # The content field holds the model's response
+            if isinstance(last_msg, dict) and "content" in last_msg:
+                return last_msg["content"].strip()
+            # Fallback: if the structure is unexpected, return the text itself
+            return str(last_msg).strip()
         except Exception:
             pass
     # Fallback explanations based solely on the predicted label
@@ -148,7 +181,7 @@ def generate_llm_explanation(
 # -----------------------------------------------------------------------------
 
 def chatbot_answer(user_msg: str, last_pred_label: str | None = None,
-                   llm_model_name: str = "distilgpt2") -> str:
+                   llm_model_name: str = "openai/gpt-oss-20b") -> str:
     """
     Generate a chatbot reply for a user's question.
 
@@ -167,38 +200,51 @@ def chatbot_answer(user_msg: str, last_pred_label: str | None = None,
         A friendly, empathetic reply in Korean.
     """
     # Base prompt describing the assistant's persona and safety constraints
-    base_prompt = (
-        "너는 우울증 관련 상담 AI입니다. 진단을 내리지 않고, 사용자가 묻는 질문에 대한 일반적인 정보와 "
-        "감정 조절 팁, 스트레스 관리 방법, 생활습관 개선 조언 등을 제공합니다. 또한 우울증 예측 결과의 "
-        "의미를 이해할 수 있도록 돕지만 전문적인 의료 판단은 하지 않습니다.\n"
+    # We'll construct a system message describing the chatbot's role
+    # and safety constraints.  Including the last prediction label helps
+    # personalise the response while maintaining safety.
+    system_message = (
+        "너는 우울증 관련 상담 AI입니다. 진단을 내리지 않고, 사용자가 묻는 질문에 대한 "
+        "일반적인 정보와 감정 조절 팁, 스트레스 관리 방법, 생활습관 개선 조언 등을 제공합니다. "
+        "또한 우울증 예측 결과의 의미를 이해할 수 있도록 돕지만 전문적인 의료 판단은 하지 않습니다."
     )
     if last_pred_label:
-        base_prompt += f"참고로 최근 모델 예측 결과는 '{last_pred_label}' 입니다.\n"
-    base_prompt += (
-        "사용자의 질문에 대해 공감가는 어조로 3~5문장으로 답변해 주세요."
-    )
-    prompt = base_prompt + f"\n사용자: {user_msg}\nAI:"  # Format conversation
+        system_message += f" 최근 모델 예측 결과는 '{last_pred_label}' 입니다."
+    system_message += " 질문에 대해 공감하는 어조로 3~5문장으로 답변하세요."
     # Use transformers if available
     if _transformers_available:
         try:
             tokenizer = AutoTokenizer.from_pretrained(llm_model_name)
-            model = AutoModelForCausalLM.from_pretrained(llm_model_name)
+            model = AutoModelForCausalLM.from_pretrained(
+                llm_model_name,
+                torch_dtype="auto",
+                device_map="auto",
+            )
             gen = pipeline(
                 "text-generation",
                 model=model,
                 tokenizer=tokenizer,
-                device=-1,
+                torch_dtype="auto",
+                device_map="auto",
             )
-            response = gen(
-                prompt,
-                max_length=len(prompt.split()) + 60,
-                num_return_sequences=1,
-                do_sample=True,
-                temperature=0.8,
-            )
-            text = response[0]["generated_text"]
-            # Extract the assistant's part after the last "AI:" marker
-            return text.split("AI:")[-1].strip()
+            # Build chat history messages for context
+            messages: list[dict[str, str]] = []
+            # Append system message at the start
+            messages.append({"role": "system", "content": system_message})
+            # Append previous chat history
+            for role, content in st.session_state.get("chat_history", []):
+                # Only include last few messages to avoid hitting token limits
+                if role in ("user", "assistant"):
+                    messages.append({"role": role, "content": content})
+            # Append current user question
+            messages.append({"role": "user", "content": user_msg})
+            result = gen(messages, max_new_tokens=180)
+            generated_msgs = result[0]["generated_text"]
+            # The last element contains the assistant's reply
+            last_msg = generated_msgs[-1]
+            if isinstance(last_msg, dict) and "content" in last_msg:
+                return last_msg["content"].strip()
+            return str(last_msg).strip()
         except Exception:
             pass
     # Determine severity-specific suggestion templates
