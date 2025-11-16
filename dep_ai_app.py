@@ -5,6 +5,25 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 
+"""
+Streamlit application for depression severity prediction with
+explainable AI and conversational guidance.
+
+This application uses a TF‑IDF vectorizer and a pre‑trained XGBoost
+model to predict the severity of depressive symptoms from a user‑
+provided text description.  After generating a prediction, the app
+produces a concise explanation of the result using a lightweight
+language model when available (e.g. MiniLM or DistilGPT2).  The app
+also includes a chat interface that allows users to ask follow‑up
+questions.  The chatbot provides general information and wellness
+tips related to depression, emotion regulation, stress management and
+healthy lifestyle habits without offering any medical diagnosis.
+
+Safety note: all responses explicitly avoid making clinical
+assessments.  The advice offered is general in nature and users
+should consult a healthcare professional for medical guidance.
+"""
+
 # Try to import the Hugging Face transformers library.  If it's not
 # available (for instance due to missing dependencies), we set a
 # flag so that the app can fall back to deterministic responses.
@@ -48,11 +67,21 @@ label_map = {0: "정상", 1: "경미한 우울증", 2: "중등도 우울증"}
 # predefined fallback text is returned based on the predicted label.
 # -----------------------------------------------------------------------------
 
-def generate_llm_explanation(user_text: str, pred_label: str,
-                             llm_model_name: str = "distilgpt2",
-                             device: str = "cpu") -> str:
+def generate_llm_explanation(
+    user_text: str,
+    pred_label: str,
+    llm_model_name: str = "distilgpt2",
+    device: str = "cpu",
+) -> str:
     """
     Generate a natural language explanation for the predicted label.
+
+    This function attempts to explain the model's prediction by
+    summarising the user's statement and inferring potential causes of
+    their depressive feelings.  When a language model is available, it
+    generates a short empathetic explanation that interprets possible
+    stressors or triggers mentioned in the input.  If the model
+    cannot be loaded, fallback text is used.
 
     Parameters
     ----------
@@ -61,37 +90,39 @@ def generate_llm_explanation(user_text: str, pred_label: str,
     pred_label : str
         The predicted category name (e.g. "정상", "경미한 우울증").
     llm_model_name : str, optional
-        Name of the Hugging Face model to use for generation.  Default is
-        "distilgpt2" because of its small size and permissive license.
+        Name of the Hugging Face model to use for generation.  Default
+        is ``"distilgpt2"`` because of its small size and permissive
+        license.
     device : str, optional
-        Device for model execution (e.g. "cpu" or "cuda").  Default is CPU.
+        Device for model execution (e.g. ``"cpu"`` or ``"cuda"``).  Default
+        is CPU.
 
     Returns
     -------
     str
-        A Korean explanation describing the prediction in 3–5 sentences.
+        A Korean explanation describing the prediction in 3–5 sentences,
+        highlighting possible causes mentioned in the user input.
     """
-    # Construct a prompt instructing the model to summarise the result in
-    # Korean, emphasising empathy and avoiding diagnostic language.
+    # Prompt instructing the language model to infer causes from the input
     prompt = (
         f"사용자의 진술: {user_text}\n"
         f"모델의 예측 우울증 중증도: {pred_label}\n"
-        "위 두 정보를 바탕으로 결과를 이해하기 쉽게 설명해 주세요. "
-        "친절하고 공감가는 어조로 한국어로 3~5문장으로 작성해 주세요. "
-        "의료적 진단은 하지 말고, 일반적인 감정 관리 및 스트레스 관리 팁을 포함하세요."
+        "사용자가 서술한 내용에서 우울감을 유발한 주요 원인이나 스트레스로 추측되는 부분을 찾아 "
+        "해석해 주세요. 결과를 이해하기 쉽게 3~5문장으로 설명하고, 공감어린 어조로 감정 관리와 "
+        "스트레스 완화 팁을 포함해 주세요. 의료적 진단은 하지 마세요."
     )
-    # Attempt to generate text using a transformers pipeline
+    # Use a language model if available
     if _transformers_available:
         try:
             tokenizer = AutoTokenizer.from_pretrained(llm_model_name)
             model = AutoModelForCausalLM.from_pretrained(llm_model_name)
-            generator = pipeline(
+            gen = pipeline(
                 "text-generation",
                 model=model,
                 tokenizer=tokenizer,
                 device=0 if device == "cuda" else -1,
             )
-            result = generator(
+            result = gen(
                 prompt,
                 max_length=len(prompt.split()) + 80,
                 num_return_sequences=1,
@@ -99,28 +130,27 @@ def generate_llm_explanation(user_text: str, pred_label: str,
                 temperature=0.8,
             )
             generated = result[0]["generated_text"]
-            # Remove the prompt from the generated output
-            return generated.split("\n")[-1].strip()
+            # Remove the prompt portion and return the explanation
+            # If the model echoes the prompt, split on the last newline
+            explanation_lines = generated.split("\n")
+            return explanation_lines[-1].strip()
         except Exception:
-            # If anything fails, fall back to deterministic responses
             pass
-    # Fallback explanations for each label
+    # Fallback explanations based solely on the predicted label
     if pred_label == "정상":
         return (
-            "모델 예측 결과 정상 범주로 판단됩니다. 현재 입력하신 내용으로 보아 큰 우울 증상은 나타나지 "
-            "않습니다. 감정일지를 작성하거나 규칙적인 생활을 통해 긍정적인 상태를 유지해보세요."
+            "모델 예측 결과 정상 범주로 판단됩니다. 입력하신 내용으로 보아 큰 우울 증상은 나타나지 않지만, "
+            "생활 속 스트레스 요인을 줄이고 긍정적인 활동을 지속하는 것이 좋습니다."
         )
     if pred_label == "경미한 우울증":
         return (
-            "모델 예측 결과 경미한 우울 증상이 감지되었습니다. 최근 감정 변화를 주의 깊게 관찰하고, "
-            "스트레스를 줄이는 활동을 시도해보세요. 필요하면 친구나 가족과 대화를 나누거나 상담을 "
-            "고려해보는 것도 도움이 됩니다."
+            "모델 예측 결과 경미한 우울 증상이 감지되었습니다. 최근 스트레스 상황이나 관계 문제 등이 "
+            "영향을 줄 수 있습니다. 규칙적인 운동과 충분한 휴식으로 감정 조절을 시도해보세요."
         )
     # pred_label == "중등도 우울증" or unknown
     return (
-        "모델 예측 결과 중등도 우울 증상이 감지되었습니다. 우울감을 감소시키기 위해 충분한 휴식과 규칙적인 "
-        "생활습관을 유지해보세요. 전문적인 상담이나 정신건강의학과 전문의의 도움이 필요할 수 있으니 참고하시기 "
-        "바랍니다."
+        "모델 예측 결과 중등도 우울 증상이 감지되었습니다. 장기간의 스트레스나 여러 문제들이 영향을 미쳤을 수 있습니다. "
+        "신뢰할 수 있는 사람들과 이야기를 나누고 전문가의 도움을 받아보는 것을 권장합니다."
     )
 
 
@@ -297,18 +327,31 @@ for role, message in st.session_state["chat_history"]:
     with st.chat_message(role):
         st.markdown(message)
 
-# Chat input: if the user types a question, produce an answer
-user_query = st.chat_input("우울증 관련 일반 상담, 감정 조절, 스트레스 관리 등에 대해 질문해보세요.")
-if user_query:
-    # Append user message
-    st.session_state["chat_history"].append(("user", user_query))
-    with st.chat_message("user"):
-        st.markdown(user_query)
-    # Generate bot reply using last predicted label as context
-    reply = chatbot_answer(user_query, st.session_state.get("last_pred_label"))
+# Chat input using a text field and send button.  `st.chat_input` is
+# only available in recent Streamlit versions; using `st.text_input` ensures
+# compatibility on older runtimes.
+col1, col2 = st.columns([4, 1])
+with col1:
+    chat_prompt = st.text_input(
+        "챗봇에게 질문하기 (우울증 관련 일반 상담, 감정 조절, 스트레스 관리 등을 입력하세요.)",
+        key="chat_input",
+    )
+with col2:
+    send_clicked = st.button("전송", key="send_chat")
+
+# When the user submits a question
+if send_clicked and chat_prompt:
+    # Record the user question
+    st.session_state["chat_history"].append(("user", chat_prompt))
+    with st.container():
+        with st.chat_message("user"):
+            st.markdown(chat_prompt)
+    # Generate reply using last predicted label if available
+    reply = chatbot_answer(chat_prompt, st.session_state.get("last_pred_label"))
     st.session_state["chat_history"].append(("assistant", reply))
-    with st.chat_message("assistant"):
-        st.markdown(reply)
+    with st.container():
+        with st.chat_message("assistant"):
+            st.markdown(reply)
 
 
 # Footer with additional information
