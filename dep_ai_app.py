@@ -5,6 +5,25 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 
+"""
+Streamlit application for depression severity prediction with
+explainable AI and conversational guidance.
+
+This application uses a TF‑IDF vectorizer and a pre‑trained XGBoost
+model to predict the severity of depressive symptoms from a user‑
+provided text description.  After generating a prediction, the app
+produces a concise explanation of the result using a lightweight
+language model when available (e.g. MiniLM or DistilGPT2).  The app
+also includes a chat interface that allows users to ask follow‑up
+questions.  The chatbot provides general information and wellness
+tips related to depression, emotion regulation, stress management and
+healthy lifestyle habits without offering any medical diagnosis.
+
+Safety note: all responses explicitly avoid making clinical
+assessments.  The advice offered is general in nature and users
+should consult a healthcare professional for medical guidance.
+"""
+
 # Try to import the Hugging Face transformers library.  If it's not
 # available (for instance due to missing dependencies), we set a
 # flag so that the app can fall back to deterministic responses.
@@ -120,18 +139,18 @@ def generate_llm_explanation(
     # Fallback explanations based solely on the predicted label
     if pred_label == "정상":
         return (
-            "모델 예측 결과 정상 범주로 판단됩니다. 입력하신 내용으로 보아 큰 우울 증상은 나타나지 않지만, "
-            "생활 속 스트레스 요인을 줄이고 긍정적인 활동을 지속하는 것이 좋습니다."
+            "모델 예측 결과 정상 범주로 판단됩니다. 우울감을 느끼지 않더라도 규칙적인 운동과 충분한 수면, "
+            "균형 잡힌 식단, 감사일기 쓰기 등 건강한 생활습관을 꾸준히 유지하는 것이 정신건강에 도움이 됩니다."
         )
     if pred_label == "경미한 우울증":
         return (
-            "모델 예측 결과 경미한 우울 증상이 감지되었습니다. 최근 스트레스 상황이나 관계 문제 등이 "
-            "영향을 줄 수 있습니다. 규칙적인 운동과 충분한 휴식으로 감정 조절을 시도해보세요."
+            "모델 예측 결과 경미한 우울 증상이 감지되었습니다. 스트레스를 느끼는 상황을 점검하고, "
+            "운동·명상·감사일기 등으로 마음을 다스려 보세요. 걱정이 지속되면 주변의 지지를 받거나 전문가 상담을 통해 도움을 받을 수 있습니다."
         )
     # pred_label == "중등도 우울증" or unknown
     return (
-        "모델 예측 결과 중등도 우울 증상이 감지되었습니다. 장기간의 스트레스나 여러 문제들이 영향을 미쳤을 수 있습니다. "
-        "신뢰할 수 있는 사람들과 이야기를 나누고 전문가의 도움을 받아보는 것을 권장합니다."
+        "모델 예측 결과 중등도 우울 증상이 감지되었습니다. 지속적인 스트레스나 다양한 문제들이 영향을 미쳤을 수 있습니다. "
+        "충분한 휴식과 규칙적인 생활습관을 유지하고, 신뢰할 수 있는 사람들과 이야기하거나 전문가에게 도움을 요청하세요. 심각한 증상이 지속되면 치료를 고려하세요."
     )
 
 
@@ -204,28 +223,28 @@ def chatbot_answer(user_msg: str, last_pred_label: str | None = None,
     msg = user_msg.lower()
     if any(keyword in msg for keyword in ["스트레스", "stress"]):
         return (
-            "스트레스를 관리하기 위해서는 규칙적인 운동, 충분한 수면, 깊은 호흡이나 명상과 같은 이완 기법을 시도해 보세요. "
-            "가벼운 산책이나 취미 활동도 도움이 됩니다."
+            "스트레스를 관리하기 위해서는 규칙적인 운동, 충분한 수면, 균형 잡힌 식사, 심호흡이나 명상과 같은 이완 기법을 활용해보세요. "
+            "CDC와 NIMH는 감사일기 쓰기, 자연 속 산책, 믿을 수 있는 사람들과 대화하는 것이 스트레스 완화에 도움이 된다고 설명합니다."
         )
     if any(keyword in msg for keyword in ["감정", "조절", "emotion"]):
         return (
-            "감정을 조절하는 방법으로는 마음챙김이나 호흡 운동을 통해 현재 순간에 집중하는 것이 있습니다. "
-            "또한 감정을 억누르기보다 일기 쓰기 등으로 표현해보는 것도 좋습니다."
+            "감정을 조절하기 위해서는 마음챙김과 호흡법을 통해 현재 순간에 집중하고, 감정을 일기에 기록해 표현하는 것이 좋습니다. "
+            "또한 긍정과 부정 감정의 균형을 유지하고 감사하는 마음을 갖는 것이 도움이 됩니다."
         )
     if any(keyword in msg for keyword in ["생활", "습관", "lifestyle"]):
         return (
-            "건강한 생활습관을 위해 균형 잡힌 식사와 규칙적인 운동을 유지하고, 충분한 수면을 취하세요. "
-            "또한 지나친 카페인이나 알코올 섭취를 피하는 것이 좋습니다."
+            "건강한 생활습관을 위해서는 규칙적인 운동과 충분한 수면, 균형 잡힌 식단을 유지하고 카페인·알코올 섭취를 줄이며, 담배와 약물을 피하는 것이 중요합니다. "
+            "가족과 친구들과 시간을 보내고 취미나 봉사 활동을 통해 삶의 의미를 찾는 것도 도움이 됩니다."
         )
     if any(keyword in msg for keyword in ["결과", "예측", "해석"]):
         return (
-            "예측 결과는 참고용이며, 감정을 이해하는 데 도움을 주는 지표입니다. "
-            "정확한 진단을 위해서는 전문의의 상담이 필요함을 기억하세요."
+            "모델의 예측 결과는 참고용으로, 정신건강 상태를 이해하는 데 도움이 될 수 있습니다. "
+            "결과에 대해 걱정된다면 믿을 수 있는 사람들과 이야기하거나 전문의와 상담해보세요. 건강한 생활습관과 스트레스 관리가 상태 개선에 도움이 될 수 있습니다."
         )
     # Default fallback
     return (
-        "질문을 해주셔서 감사합니다. 저는 일반적인 정보만 제공하며, 진단을 내리거나 치료를 대신하지 않습니다. "
-        "감정 조절이나 스트레스 관리에 대해 궁금한 점이 있으면 편하게 물어봐 주세요."
+        "질문을 해주셔서 감사합니다. 저는 일반적인 정보만 제공하는 상담 AI이며, 진단을 내리거나 치료를 대신하지 않습니다. "
+        "생활습관 개선과 스트레스 관리, 긍정적인 마음가짐을 통해 정신건강을 돌보세요. 궁금한 점이 있으면 언제든지 질문해 주세요."
     )
 
 
