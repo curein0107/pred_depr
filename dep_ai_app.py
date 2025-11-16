@@ -5,6 +5,25 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 
+"""
+Streamlit application for depression severity prediction with
+explainable AI and conversational guidance.
+
+This application uses a TF‑IDF vectorizer and a pre‑trained XGBoost
+model to predict the severity of depressive symptoms from a user‑
+provided text description.  After generating a prediction, the app
+produces a concise explanation of the result using a lightweight
+language model when available (e.g. MiniLM or DistilGPT2).  The app
+also includes a chat interface that allows users to ask follow‑up
+questions.  The chatbot provides general information and wellness
+tips related to depression, emotion regulation, stress management and
+healthy lifestyle habits without offering any medical diagnosis.
+
+Safety note: all responses explicitly avoid making clinical
+assessments.  The advice offered is general in nature and users
+should consult a healthcare professional for medical guidance.
+"""
+
 # Try to import the Hugging Face transformers library.  If it's not
 # available (for instance due to missing dependencies), we set a
 # flag so that the app can fall back to deterministic responses.
@@ -51,7 +70,7 @@ label_map = {0: "정상", 1: "경미한 우울증", 2: "중등도 우울증"}
 def generate_llm_explanation(
     user_text: str,
     pred_label: str,
-    llm_model_name: str = "openai/gpt-oss-20b",
+    llm_model_name: str = "Qwen/Qwen3-8B-Chat",
     device: str = "cpu",
 ) -> str:
     """
@@ -71,9 +90,14 @@ def generate_llm_explanation(
     pred_label : str
         The predicted category name (e.g. "정상", "경미한 우울증").
     llm_model_name : str, optional
-        Name of the Hugging Face model to use for generation.  Default
-        is ``"distilgpt2"`` because of its small size and permissive
-        license.
+        Name of the Hugging Face model to use for generation.  By default
+        this uses ``"Qwen/Qwen3-8B-Chat"``, an 8.2 billion‑parameter model
+        from the Qwen3 series.  This model supports over 100 languages
+        including Korean and provides strong reasoning and dialogue
+        capabilities at a relatively compact size【793020839043067†L149-L181】.  If
+        the environment cannot load this model (e.g. due to limited
+        memory), the function will automatically fall back to a smaller
+        model such as DistilGPT2.
     device : str, optional
         Device for model execution (e.g. ``"cpu"`` or ``"cuda"``).  Default
         is CPU.
@@ -162,7 +186,7 @@ def generate_llm_explanation(
 # -----------------------------------------------------------------------------
 
 def chatbot_answer(user_msg: str, last_pred_label: str | None = None,
-                   llm_model_name: str = "openai/gpt-oss-20b") -> str:
+                   llm_model_name: str = "Qwen/Qwen3-8B-Chat") -> str:
     """
     Generate a chatbot reply for a user's question.
 
@@ -173,7 +197,11 @@ def chatbot_answer(user_msg: str, last_pred_label: str | None = None,
     last_pred_label : str or None
         The most recent predicted label from the classification model (if any).
     llm_model_name : str, optional
-        Name of the lightweight language model to use.  Default is "distilgpt2".
+        Name of the language model to use for generation.  The default
+        ``"Qwen/Qwen3-8B-Chat"`` is a Korean‑capable model from the
+        Qwen3 series, providing robust multilingual dialogue ability at
+        around 8 billion parameters【793020839043067†L149-L181】.  If this
+        model cannot be loaded, smaller models are used automatically.
 
     Returns
     -------
@@ -366,31 +394,26 @@ for role, message in st.session_state["chat_history"]:
     with st.chat_message(role):
         st.markdown(message)
 
-# Chat input using a text field and send button.  `st.chat_input` is
-# only available in recent Streamlit versions; using `st.text_input` ensures
-# compatibility on older runtimes.
-col1, col2 = st.columns([4, 1])
-with col1:
-    chat_prompt = st.text_input(
-        "챗봇에게 질문하기 (우울증 관련 일반 상담, 감정 조절, 스트레스 관리 등을 입력하세요.)",
-        key="chat_input",
-    )
-with col2:
-    send_clicked = st.button("전송", key="send_chat")
+# Chat input using Streamlit's chat widget.  ``st.chat_input`` appears
+# below previous messages and allows users to press Enter to send.  This
+# provides a more natural chat experience compared to separate text
+# fields and buttons.
+chat_prompt = st.chat_input(
+    "챗봇에게 질문하세요 (우울증 관련 상담, 감정 조절, 스트레스 관리, 생활습관 개선 등)",
+    key="chat_input",
+)
 
-# When the user submits a question
-if send_clicked and chat_prompt:
+# When the user submits a question via the chat input
+if chat_prompt:
     # Record the user question
     st.session_state["chat_history"].append(("user", chat_prompt))
-    with st.container():
-        with st.chat_message("user"):
-            st.markdown(chat_prompt)
+    with st.chat_message("user"):
+        st.markdown(chat_prompt)
     # Generate reply using last predicted label if available
     reply = chatbot_answer(chat_prompt, st.session_state.get("last_pred_label"))
     st.session_state["chat_history"].append(("assistant", reply))
-    with st.container():
-        with st.chat_message("assistant"):
-            st.markdown(reply)
+    with st.chat_message("assistant"):
+        st.markdown(reply)
 
 
 # Footer with additional information
