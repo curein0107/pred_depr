@@ -5,6 +5,25 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from datetime import datetime
 
+"""
+Streamlit application for depression severity prediction with
+explainable AI and conversational guidance.
+
+This application uses a TF‑IDF vectorizer and a pre‑trained XGBoost
+model to predict the severity of depressive symptoms from a user‑
+provided text description.  After generating a prediction, the app
+produces a concise explanation of the result using a lightweight
+language model when available (e.g. MiniLM or DistilGPT2).  The app
+also includes a chat interface that allows users to ask follow‑up
+questions.  The chatbot provides general information and wellness
+tips related to depression, emotion regulation, stress management and
+healthy lifestyle habits without offering any medical diagnosis.
+
+Safety note: all responses explicitly avoid making clinical
+assessments.  The advice offered is general in nature and users
+should consult a healthcare professional for medical guidance.
+"""
+
 # Try to import the Hugging Face transformers library.  If it's not
 # available (for instance due to missing dependencies), we set a
 # flag so that the app can fall back to deterministic responses.
@@ -375,26 +394,45 @@ for role, message in st.session_state["chat_history"]:
     with st.chat_message(role):
         st.markdown(message)
 
-# Chat input using Streamlit's chat widget.  ``st.chat_input`` appears
-# below previous messages and allows users to press Enter to send.  This
-# provides a more natural chat experience compared to separate text
-# fields and buttons.
-chat_prompt = st.chat_input(
-    "챗봇에게 질문하세요 (우울증 관련 상담, 감정 조절, 스트레스 관리, 생활습관 개선 등)",
-    key="chat_input",
-)
-
-# When the user submits a question via the chat input
-if chat_prompt:
-    # Record the user question
-    st.session_state["chat_history"].append(("user", chat_prompt))
-    with st.chat_message("user"):
-        st.markdown(chat_prompt)
-    # Generate reply using last predicted label if available
-    reply = chatbot_answer(chat_prompt, st.session_state.get("last_pred_label"))
-    st.session_state["chat_history"].append(("assistant", reply))
-    with st.chat_message("assistant"):
-        st.markdown(reply)
+# Chat input
+# Use ``st.chat_input`` when available (Streamlit v1.24+).  On older
+# Streamlit versions (or if chat widgets are disabled), fall back to
+# ``st.text_input`` with a send button.  This ensures the chatbot
+# interface remains visible across environments.
+chat_prompt = None
+if hasattr(st, "chat_input"):
+    # Chat input appears below the message history and submits on Enter.
+    chat_prompt = st.chat_input(
+        "챗봇에게 질문하세요 (우울증 관련 상담, 감정 조절, 스트레스 관리, 생활습관 개선 등)",
+        key="chat_input",
+    )
+    # If the user enters a message, process it
+    if chat_prompt:
+        st.session_state["chat_history"].append(("user", chat_prompt))
+        with st.chat_message("user"):
+            st.markdown(chat_prompt)
+        reply = chatbot_answer(chat_prompt, st.session_state.get("last_pred_label"))
+        st.session_state["chat_history"].append(("assistant", reply))
+        with st.chat_message("assistant"):
+            st.markdown(reply)
+else:
+    # Fallback: text input and button
+    col_c1, col_c2 = st.columns([4, 1])
+    with col_c1:
+        fallback_prompt = st.text_input(
+            "챗봇에게 질문하기 (우울증 관련 상담, 감정 조절, 스트레스 관리, 생활습관 개선 등)",
+            key="chat_input_text",
+        )
+    with col_c2:
+        send_fallback = st.button("전송", key="send_chat_button")
+    if send_fallback and fallback_prompt:
+        st.session_state["chat_history"].append(("user", fallback_prompt))
+        with st.chat_message("user"):
+            st.markdown(fallback_prompt)
+        reply = chatbot_answer(fallback_prompt, st.session_state.get("last_pred_label"))
+        st.session_state["chat_history"].append(("assistant", reply))
+        with st.chat_message("assistant"):
+            st.markdown(reply)
 
 
 # Footer with additional information
